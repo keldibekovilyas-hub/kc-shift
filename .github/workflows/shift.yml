@@ -29,6 +29,7 @@ jobs:
       BINOTEL_API_KEY: ${{ secrets.BINOTEL_API_KEY }}
       BINOTEL_API_SECRET: ${{ secrets.BINOTEL_API_SECRET }}
       KC_SHEET_URL: ${{ secrets.KC_SHEET_URL }}
+      REPORT_LOGIN: ${{ secrets.REPORT_LOGIN }}
       REPORT_PASSWORD: ${{ secrets.REPORT_PASSWORD }}
       KC_SHIFT_DATA: ${{ github.workspace }}/data
     steps:

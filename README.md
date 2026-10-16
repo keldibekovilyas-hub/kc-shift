@@ -19,7 +19,7 @@
 | `BITRIX_WEBHOOK` | входящий вебхук Битрикс24 (только чтение) |
 | `BINOTEL_API_KEY`, `BINOTEL_API_SECRET` | ключи Binotel |
 | `KC_SHEET_URL` | ссылка на таблицу КЦ вида `https://docs.google.com/spreadsheets/d/<id>/export?format=xlsx` |
-| `REPORT_PASSWORD` | пароль, которым открывается сайт |
+| `REPORT_LOGIN`, `REPORT_PASSWORD` | логин и пароль, которыми открывается сайт (ключ шифрования строится из пары) |
 
 ## Включить Pages
 Settings → Pages → Source: **GitHub Actions**. Адрес: `https://<логин>.github.io/<репозиторий>/`.
