@@ -1,5 +1,4 @@
-out/*.html
-site/
+out/
 __pycache__/
 .cache/
 *.part
