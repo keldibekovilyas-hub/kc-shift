@@ -23,7 +23,8 @@ for f in sorted(os.listdir(OUT)):
     json.dump({"v": 1, "iter": ITER, "salt": base64.b64encode(salt).decode(), "nonce": base64.b64encode(nonce).decode(), "ct": base64.b64encode(ct).decode()},
               io.open(os.path.join(SITE, "days", day + ".enc"), "w"))
     days.append(day)
-days.sort(reverse=True)
+# в индекс попадают ВСЕ дни, что лежат в site/days (старые .enc хранятся в репозитории, перешифровывать их не нужно)
+days = sorted({f[:-4] for f in os.listdir(os.path.join(SITE, "days")) if f.endswith(".enc")}, reverse=True)
 json.dump(days, io.open(os.path.join(SITE, "days", "index.json"), "w"))
 INDEX = r"""<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Смена КЦ</title><style>
