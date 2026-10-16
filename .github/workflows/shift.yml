@@ -1,0 +1,81 @@
+name: Отчёт за смену КЦ
+
+on:
+  schedule:
+    - cron: "45 16 * * *"   # 21:45 Алматы — снимок ответственных «после смены» + черновик отчёта за сегодня
+    - cron: "40 2 * * *"    # 07:40 Алматы — итоговый отчёт за вчера (звонки до утра, розданные утром) + публикация
+  workflow_dispatch:
+    inputs:
+      day:
+        description: "День смены (ГГГГ-ММ-ДД), пусто = вчера по Алматы"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: shift-report
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      TZ: Asia/Almaty
+      BITRIX_WEBHOOK: ${{ secrets.BITRIX_WEBHOOK }}
+      BINOTEL_API_KEY: ${{ secrets.BINOTEL_API_KEY }}
+      BINOTEL_API_SECRET: ${{ secrets.BINOTEL_API_SECRET }}
+      KC_SHEET_URL: ${{ secrets.KC_SHEET_URL }}
+      REPORT_PASSWORD: ${{ secrets.REPORT_PASSWORD }}
+      KC_SHIFT_DATA: ${{ github.workspace }}/data
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -q openpyxl cryptography
+
+      # вечерний запуск: снимок «после смены» (кто на ком висит в 21:45) + черновик отчёта за сегодня
+      - name: Вечер — снимок ответственных и черновик
+        if: github.event_name == 'schedule' && github.event.schedule == '45 16 * * *'
+        run: |
+          python -u build_shift.py --snapshot
+          python -u build_shift.py $(date +%F) --out out
+
+      # утренний запуск: снимок «до дня» для сегодняшней смены + итоговый отчёт за вчера
+      - name: Утро — снимок и итоговый отчёт за вчера
+        if: github.event_name != 'schedule' || github.event.schedule == '40 2 * * *'
+        run: |
+          python -u build_shift.py --snapshot
+          DAY="${{ github.event.inputs.day }}"; [ -z "$DAY" ] && DAY=$(date -d yesterday +%F)
+          python -u build_shift.py "$DAY" --out out
+
+      - name: Сохранить снимки и отчёты в репозиторий
+        run: |
+          git config user.name "shift-bot"; git config user.email "shift-bot@users.noreply.github.com"
+          git add data/snapshots out/*.json
+          git diff --cached --quiet || git commit -m "shift: $(date '+%F %H:%M')"
+          git pull --rebase --autostash origin main || true
+          git push
+
+      - name: Собрать сайт (зашифровать отчёты)
+        run: |
+          for j in out/*.json; do python render.py "$j" "${j%.json}.html"; done
+          python publish.py out site
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
