@@ -36,7 +36,7 @@ def render(r):
     day = r["day"]; dd = "%s.%s.%s" % (day[8:], day[5:7], day[:4]); t = r["total"]
     H = ["<!doctype html><html lang='ru'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'>",
          "<title>Смена КЦ %s</title><style>%s</style></head><body><div class='wrap'>" % (dd, CSS)]
-    H.append("<h1>Отчёт за смену КЦ · %s · только рекламные лиды</h1>" % dd)
+    H.append("<h1>Отчёт за смену КЦ · %s · только рекламные лиды%s</h1>" % (dd, " · <span class='bad'>ЧЕРНОВИК, смена ещё идёт</span>" if r.get("draft") else ""))
     H.append("<p class='note'>«Взял за день» = сделали ответственным в этот день: новые лиды дня + вечерние накануне, розданные утром + дожим НБ + перекинутые. Лид = человек. Записал = стадия записи на любой карточке; дожим = проигрыш. Звонки — только исходящие Binotel по номеру после получения лида.</p>")
     H.append("<p class='note'>Собрано %s · снимки ответственных: до дня %s, после смены %s · звонки Binotel до %s · отчёт КЦ скачан %s.</p>"
              % (esc(r["built"]), esc(r["snap_before"] or "нет"), esc(r["snap_after"] or "нет"), esc(r["calls_until"]), esc(r["kc_taken"])))

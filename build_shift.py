@@ -305,7 +305,9 @@ tot = {k: sum(s[k] for s in summary) for k in ("took", "new", "eve", "dojim_in",
 tot["conv"] = round(100.0 * tot["booked"] / tot["took"], 1) if tot["took"] else 0
 res = {"day": DAY, "built": NOW.strftime("%Y-%m-%d %H:%M"), "snap_before": SNAP_B_T, "snap_after": SNAP_A_T, "calls_until": CALLS_UNTIL, "kc_taken": KC_TAKEN,
        "summary": summary, "total": tot, "people": people, "unassigned": una}
+res["draft"] = NOW.date().isoformat() <= DAY                          # смена ещё идёт — это черновик, итог будет утром
 json.dump(res, io.open(os.path.join(OUT, DAY + ".json"), "w", encoding="utf-8"), ensure_ascii=False)
+json.dump({"day": DAY, "draft": res["draft"], "built": res["built"]}, io.open(os.path.join(OUT, DAY + ".meta.json"), "w", encoding="utf-8"))
 print("лидов в счёт дня %d · записей %d (%.1f%%) · без звонка %d · нераспределённых %d" % (tot["took"], tot["booked"], tot["conv"], tot["no_call"], len(una)))
 for s in summary: print("  %-26s взял %3d (нов %3d веч %2d дож %2d пер %2d) · зап %2d · %4.1f%% · без звонка %2d · исх %3d · КЦ %2d · утром %d" % (
     s["mgr"][:26], s["took"], s["new"], s["eve"], s["dojim_in"], s["moved"], s["booked"], s["conv"], s["no_call"], s["n_out"], s["in_kc"], s["morning"]))

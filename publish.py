@@ -27,7 +27,19 @@ for f in sorted(os.listdir(OUT)):
     days.append(day)
 # в индекс попадают ВСЕ дни, что лежат в site/days (старые .enc хранятся в репозитории, перешифровывать их не нужно)
 days = sorted({f[:-4] for f in os.listdir(os.path.join(SITE, "days")) if f.endswith(".enc")}, reverse=True)
-json.dump(days, io.open(os.path.join(SITE, "days", "index.json"), "w"))
+# пометка черновика: из out/<день>.meta.json (свежая сборка) или из прежнего индекса
+prev = {}
+try:
+    for x in json.load(io.open(os.path.join(SITE, "days", "index.json"))):
+        if isinstance(x, dict): prev[x["day"]] = x
+except Exception:
+    pass
+meta = {}
+for f in os.listdir(OUT):
+    if f.endswith(".meta.json"):
+        m = json.load(io.open(os.path.join(OUT, f), encoding="utf-8")); meta[m["day"]] = m
+index = [{"day": d, "draft": bool((meta.get(d) or prev.get(d) or {}).get("draft")), "built": (meta.get(d) or prev.get(d) or {}).get("built", "")} for d in days]
+json.dump(index, io.open(os.path.join(SITE, "days", "index.json"), "w"), ensure_ascii=False)
 INDEX = r"""<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Смена КЦ</title><style>
 :root{--bg:#f6f7fb;--card:#fff;--ink:#1b2430;--mut:#6b7280;--line:#e5e7eb;--blue:#1f4e79}
@@ -50,12 +62,13 @@ return crypto.subtle.deriveKey({name:'PBKDF2',salt,iterations:iter,hash:'SHA-256
 const b64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
 async function open(day,pw){const r=await fetch('days/'+day+'.enc?'+Date.now());if(!r.ok)throw new Error('нет файла за '+day);const j=await r.json();
 const k=await key(pw,b64(j.salt),j.iter);const pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:b64(j.nonce)},k,b64(j.ct));return new TextDecoder().decode(pt)}
-function fill(sel){sel.innerHTML=DAYS.map(d=>'<option value="'+d+'">'+d.slice(8)+'.'+d.slice(5,7)+'.'+d.slice(0,4)+'</option>').join('')}
+const lbl=x=>x.day.slice(8)+'.'+x.day.slice(5,7)+'.'+x.day.slice(0,4)+(x.draft?' — черновик, смена идёт':'');
+function fill(sel){sel.innerHTML=DAYS.map(x=>'<option value="'+x.day+'">'+lbl(x)+'</option>').join('');const f=DAYS.find(x=>!x.draft);if(f)sel.value=f.day}
 function secret(){const st=sessionStorage.getItem('sec');if(st)return st;return $('lg').value.trim().toLowerCase()+'\n'+$('pw').value}
 async function show(day){const pw=secret();try{const html=await open(day,pw);sessionStorage.setItem('sec',pw);
 $('gate').style.display='none';$('view').style.display='block';$('frame').srcdoc=html;$('day2').value=day;$('st').textContent='';history.replaceState(null,'','#'+day)}
 catch(e){sessionStorage.removeItem('sec');$('err').textContent=e.name==='OperationError'?'Неверный логин или пароль':('Ошибка: '+e.message);$('gate').style.display='block';$('view').style.display='none'}}
-(async()=>{DAYS=await (await fetch('days/index.json?'+Date.now())).json();fill($('day'));fill($('day2'));const h=location.hash.slice(1);if(h&&DAYS.includes(h)){$('day').value=h}
+(async()=>{DAYS=(await (await fetch('days/index.json?'+Date.now())).json()).map(x=>typeof x==='string'?{day:x,draft:false}:x);fill($('day'));fill($('day2'));const h=location.hash.slice(1);if(h&&DAYS.some(x=>x.day===h)){$('day').value=h}
 $('go').onclick=()=>show($('day').value);$('pw').addEventListener('keydown',e=>{if(e.key==='Enter')show($('day').value)});$('day2').onchange=()=>show($('day2').value);
 if(sessionStorage.getItem('sec'))show($('day').value)})();
 </script></body></html>"""
